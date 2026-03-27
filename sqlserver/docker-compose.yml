@@ -48,7 +48,7 @@ services:
     volumes:
       - ./config.yaml:/config.yaml:ro
       - ./output:/output
-    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z", "--provisioning"]
+    command: ["--config-path", "/config.yaml", "-f", "/output/sync.c1z", "--provisioning"]
     networks:
       - baton-net
 
