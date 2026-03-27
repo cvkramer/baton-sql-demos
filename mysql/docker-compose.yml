@@ -1,0 +1,41 @@
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: baton
+      MYSQL_PASSWORD: demo123
+      MYSQL_DATABASE: demo
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysqldata:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ubaton", "-pdemo123"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - baton-net
+
+  baton-sql:
+    image: ghcr.io/conductorone/baton-sql:latest
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      BATON_DSN: "mysql://baton:demo123@tcp(mysql:3306)/demo"
+    volumes:
+      - ../shared/config.yaml:/config.yaml:ro
+      - ./output:/output
+    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z"]
+    networks:
+      - baton-net
+
+volumes:
+  mysqldata:
+
+networks:
+  baton-net:
+    driver: bridge

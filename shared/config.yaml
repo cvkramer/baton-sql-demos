@@ -1,0 +1,44 @@
+# baton-sql configuration
+# This config syncs users, groups, and group memberships
+
+users:
+  query: |
+    SELECT
+      id,
+      email,
+      first_name,
+      last_name,
+      status
+    FROM users
+  id: id
+  email: email
+  displayName: "{{ .first_name }} {{ .last_name }}"
+  status: status
+  statusMap:
+    active: enabled
+    inactive: disabled
+    suspended: disabled
+
+groups:
+  query: |
+    SELECT
+      id,
+      name,
+      description
+    FROM groups
+  id: id
+  displayName: name
+  description: description
+
+grants:
+  - resourceType: group
+    query: |
+      SELECT
+        gm.group_id,
+        gm.user_id,
+        'member' as role
+      FROM group_memberships gm
+    entitlement: role
+    principalId: user_id
+    principalType: user
+    resourceId: group_id

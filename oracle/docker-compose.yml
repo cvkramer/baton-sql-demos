@@ -1,0 +1,54 @@
+services:
+  oracle:
+    image: container-registry.oracle.com/database/express:21.3.0-xe
+    environment:
+      ORACLE_PWD: Demo123
+    volumes:
+      - oracledata:/opt/oracle/oradata
+    ports:
+      - "1521:1521"
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'SELECT 1 FROM DUAL;' | sqlplus -s system/Demo123@localhost/XEPDB1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s  # Oracle takes a while to initialize
+    networks:
+      - baton-net
+
+  # Oracle init container - runs SQL after DB is healthy
+  oracle-init:
+    image: container-registry.oracle.com/database/express:21.3.0-xe
+    depends_on:
+      oracle:
+        condition: service_healthy
+    volumes:
+      - ./init.sql:/init.sql:ro
+    entrypoint: [
+      "sqlplus",
+      "system/Demo123@oracle:1521/XEPDB1",
+      "@/init.sql"
+    ]
+    networks:
+      - baton-net
+
+  baton-sql:
+    image: ghcr.io/conductorone/baton-sql:latest
+    depends_on:
+      oracle-init:
+        condition: service_completed_successfully
+    environment:
+      BATON_DSN: "oracle://system:Demo123@oracle:1521/XEPDB1"
+    volumes:
+      - ../shared/config.yaml:/config.yaml:ro
+      - ./output:/output
+    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z"]
+    networks:
+      - baton-net
+
+volumes:
+  oracledata:
+
+networks:
+  baton-net:
+    driver: bridge

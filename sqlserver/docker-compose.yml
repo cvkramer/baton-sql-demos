@@ -1,0 +1,60 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Demo123!"
+    volumes:
+      - mssqldata:/var/opt/mssql
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Demo123!' -C -Q 'SELECT 1' || exit 1"
+      ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - baton-net
+
+  # SQL Server doesn't auto-run init scripts, so we use an init container
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    volumes:
+      - ./init.sql:/init.sql:ro
+    entrypoint: [
+      "/opt/mssql-tools18/bin/sqlcmd",
+      "-S", "sqlserver",
+      "-U", "sa",
+      "-P", "Demo123!",
+      "-C",
+      "-i", "/init.sql"
+    ]
+    networks:
+      - baton-net
+
+  baton-sql:
+    image: ghcr.io/conductorone/baton-sql:latest
+    depends_on:
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      BATON_DSN: "sqlserver://sa:Demo123!@sqlserver:1433?database=demo&TrustServerCertificate=true"
+    volumes:
+      - ../shared/config.yaml:/config.yaml:ro
+      - ./output:/output
+    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z"]
+    networks:
+      - baton-net
+
+volumes:
+  mssqldata:
+
+networks:
+  baton-net:
+    driver: bridge

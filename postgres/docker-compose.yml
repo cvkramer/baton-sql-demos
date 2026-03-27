@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: baton
+      POSTGRES_PASSWORD: demo123
+      POSTGRES_DB: demo
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U baton -d demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - baton-net
+
+  baton-sql:
+    image: ghcr.io/conductorone/baton-sql:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      BATON_DSN: "postgres://baton:demo123@postgres:5432/demo?sslmode=disable"
+    volumes:
+      - ../shared/config.yaml:/config.yaml:ro
+      - ./output:/output
+    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z"]
+    networks:
+      - baton-net
+
+volumes:
+  pgdata:
+
+networks:
+  baton-net:
+    driver: bridge

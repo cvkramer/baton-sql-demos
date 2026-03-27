@@ -1,0 +1,41 @@
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_USER: baton
+      MARIADB_PASSWORD: demo123
+      MARIADB_DATABASE: demo
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mariadbdata:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - baton-net
+
+  baton-sql:
+    image: ghcr.io/conductorone/baton-sql:latest
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      BATON_DSN: "mysql://baton:demo123@tcp(mariadb:3306)/demo"
+    volumes:
+      - ../shared/config.yaml:/config.yaml:ro
+      - ./output:/output
+    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z"]
+    networks:
+      - baton-net
+
+volumes:
+  mariadbdata:
+
+networks:
+  baton-net:
+    driver: bridge
