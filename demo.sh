@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage() {
     echo "Usage: $0 <command> <database>"
     echo ""
-    echo "Databases: postgres, mysql, mariadb, sqlserver, oracle"
+    echo "Databases: postgres, mysql, mariadb, sqlserver, oracle, vertica"
     echo ""
     echo "Commands:"
     echo "  up       - Start the demo environment"
@@ -52,6 +52,10 @@ case $DATABASE in
         ;;
     oracle)
         DIR="$SCRIPT_DIR/oracle"
+        COMPOSE_FILE="docker-compose.yml"
+        ;;
+    vertica)
+        DIR="$SCRIPT_DIR/vertica"
         COMPOSE_FILE="docker-compose.yml"
         ;;
     *)
@@ -105,6 +109,9 @@ case $COMMAND in
                 ;;
             oracle)
                 podman-compose -f "$COMPOSE_FILE" exec oracle sqlplus system/Demo123@localhost/XEPDB1
+                ;;
+            vertica)
+                podman-compose -f "$COMPOSE_FILE" exec vertica /opt/vertica/bin/vsql -U dbadmin
                 ;;
         esac
         ;;

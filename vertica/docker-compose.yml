@@ -1,0 +1,55 @@
+services:
+  vertica:
+    image: cjonesy/docker-vertica:latest
+    platform: linux/amd64  # No ARM image available
+    ports:
+      - "5433:5433"
+    volumes:
+      - verticadata:/home/dbadmin/docker
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/vertica/bin/vsql -U dbadmin -c 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s  # Vertica takes a while to initialize
+    networks:
+      - baton-net
+
+  # Vertica doesn't auto-run init scripts, so we use an init container
+  vertica-init:
+    image: cjonesy/docker-vertica:latest
+    platform: linux/amd64
+    depends_on:
+      vertica:
+        condition: service_healthy
+    volumes:
+      - ./init.sql:/init.sql:ro
+    entrypoint: [
+      "/opt/vertica/bin/vsql",
+      "-h", "vertica",
+      "-U", "dbadmin",
+      "-f", "/init.sql"
+    ]
+    networks:
+      - baton-net
+
+  baton-sql:
+    image: ghcr.io/conductorone/baton-sql:latest
+    depends_on:
+      vertica-init:
+        condition: service_completed_successfully
+    environment:
+      BATON_DSN: "vertica://dbadmin:@vertica:5433/docker?tlsmode=none"
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+      - ./output:/output
+    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z", "--provisioning"]
+    networks:
+      - baton-net
+
+volumes:
+  verticadata:
+
+networks:
+  baton-net:
+    driver: bridge

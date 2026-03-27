@@ -1,0 +1,64 @@
+-- Vertica init script for baton-sql demo
+-- Compatible with Vertica 9.x (uses AUTO_INCREMENT)
+
+-- Drop existing tables if they exist
+DROP TABLE IF EXISTS group_memberships CASCADE;
+DROP TABLE IF EXISTS groups CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- Users table
+CREATE TABLE users (
+    id AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Groups table
+CREATE TABLE groups (
+    id AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Group memberships (many-to-many)
+CREATE TABLE group_memberships (
+    id AUTO_INCREMENT,
+    user_id INTEGER NOT NULL,
+    group_id INTEGER NOT NULL,
+    role VARCHAR(50) DEFAULT 'member',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, group_id)
+);
+
+-- Sample data: Users (Vertica 9.x requires single-row INSERTs)
+INSERT INTO users (email, first_name, last_name, status) VALUES ('alice@example.com', 'Alice', 'Anderson', 'active');
+INSERT INTO users (email, first_name, last_name, status) VALUES ('bob@example.com', 'Bob', 'Baker', 'active');
+INSERT INTO users (email, first_name, last_name, status) VALUES ('carol@example.com', 'Carol', 'Chen', 'active');
+INSERT INTO users (email, first_name, last_name, status) VALUES ('david@example.com', 'David', 'Davis', 'inactive');
+INSERT INTO users (email, first_name, last_name, status) VALUES ('eve@example.com', 'Eve', 'Edwards', 'active');
+INSERT INTO users (email, first_name, last_name, status) VALUES ('frank@example.com', 'Frank', 'Fisher', 'suspended');
+
+-- Sample data: Groups
+INSERT INTO groups (name, description) VALUES ('engineering', 'Engineering team');
+INSERT INTO groups (name, description) VALUES ('sales', 'Sales department');
+INSERT INTO groups (name, description) VALUES ('admin', 'System administrators');
+INSERT INTO groups (name, description) VALUES ('finance', 'Finance and accounting');
+INSERT INTO groups (name, description) VALUES ('hr', 'Human resources');
+
+-- Sample data: Memberships
+INSERT INTO group_memberships (user_id, group_id, role) VALUES (1, 1, 'member');
+INSERT INTO group_memberships (user_id, group_id, role) VALUES (1, 3, 'member');
+INSERT INTO group_memberships (user_id, group_id, role) VALUES (2, 1, 'member');
+INSERT INTO group_memberships (user_id, group_id, role) VALUES (3, 2, 'member');
+INSERT INTO group_memberships (user_id, group_id, role) VALUES (3, 4, 'member');
+INSERT INTO group_memberships (user_id, group_id, role) VALUES (4, 2, 'member');
+INSERT INTO group_memberships (user_id, group_id, role) VALUES (5, 1, 'member');
+INSERT INTO group_memberships (user_id, group_id, role) VALUES (5, 5, 'member');
+
+COMMIT;
+
+SELECT 'Initialization complete' AS status;

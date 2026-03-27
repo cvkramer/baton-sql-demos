@@ -26,9 +26,9 @@ services:
     environment:
       BATON_DSN: "postgres://baton:demo123@postgres:5432/demo?sslmode=disable"
     volumes:
-      - ../shared/config.yaml:/config.yaml:ro
+      - ./config.yaml:/config.yaml:ro
       - ./output:/output
-    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z"]
+    command: ["--config-file", "/config.yaml", "-f", "/output/sync.c1z", "--provisioning"]
     networks:
       - baton-net
 

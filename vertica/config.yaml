@@ -1,5 +1,4 @@
-# baton-sql configuration
-# This config syncs users, groups, and group memberships
+# baton-sql configuration for Vertica
 # Includes provisioning (grant/revoke) support
 
 users:
@@ -31,7 +30,6 @@ groups:
   displayName: name
   description: description
 
-  # Entitlements that can be granted/revoked
   static_entitlements:
     - id: "member"
       display_name: "Member"
@@ -40,7 +38,6 @@ groups:
       grantable_to:
         - "user"
 
-      # Provisioning configuration
       provisioning:
         vars:
           user_id: "principal.ID"
@@ -48,9 +45,14 @@ groups:
 
         grant:
           queries:
+            # Vertica uses MERGE for upsert operations
             - |
-              INSERT INTO group_memberships (user_id, group_id, role, created_at)
-              VALUES (?<user_id>, ?<group_id>, 'member', NOW())
+              MERGE INTO group_memberships gm
+              USING (SELECT ?<user_id> AS user_id, ?<group_id> AS group_id) src
+              ON gm.user_id = src.user_id AND gm.group_id = src.group_id
+              WHEN NOT MATCHED THEN
+                INSERT (user_id, group_id, role, created_at)
+                VALUES (src.user_id, src.group_id, 'member', CURRENT_TIMESTAMP)
 
         revoke:
           queries:
@@ -58,7 +60,6 @@ groups:
               DELETE FROM group_memberships
               WHERE user_id = ?<user_id> AND group_id = ?<group_id>
 
-  # How to discover existing grants
   grants:
     query: |
       SELECT

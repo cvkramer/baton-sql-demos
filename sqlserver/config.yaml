@@ -1,5 +1,4 @@
-# baton-sql configuration
-# This config syncs users, groups, and group memberships
+# baton-sql configuration for SQL Server
 # Includes provisioning (grant/revoke) support
 
 users:
@@ -31,7 +30,6 @@ groups:
   displayName: name
   description: description
 
-  # Entitlements that can be granted/revoked
   static_entitlements:
     - id: "member"
       display_name: "Member"
@@ -40,7 +38,6 @@ groups:
       grantable_to:
         - "user"
 
-      # Provisioning configuration
       provisioning:
         vars:
           user_id: "principal.ID"
@@ -49,8 +46,12 @@ groups:
         grant:
           queries:
             - |
+              IF NOT EXISTS (
+                SELECT 1 FROM group_memberships
+                WHERE user_id = ?<user_id> AND group_id = ?<group_id>
+              )
               INSERT INTO group_memberships (user_id, group_id, role, created_at)
-              VALUES (?<user_id>, ?<group_id>, 'member', NOW())
+              VALUES (?<user_id>, ?<group_id>, 'member', GETDATE())
 
         revoke:
           queries:
@@ -58,7 +59,6 @@ groups:
               DELETE FROM group_memberships
               WHERE user_id = ?<user_id> AND group_id = ?<group_id>
 
-  # How to discover existing grants
   grants:
     query: |
       SELECT
